@@ -1,0 +1,1 @@
+from .custom_templates import question_template, medical_note_template, diagnose_template
