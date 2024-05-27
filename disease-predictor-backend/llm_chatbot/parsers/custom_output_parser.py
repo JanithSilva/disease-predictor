@@ -50,8 +50,7 @@ class Notes(BaseModel):
 class Diagnose(BaseModel):
     differentials: str = Field(description="Five comma seperated names of most probable diseases accrding to the symptoms in a String ")
     symptoms: str = Field(description="Formal list of symptoms in a String")
-    indicators: str = Field(description="Why this patient matches this diagnosis")
-    contraindicators: str = Field(description="Why this patient doesn't match this diagnosis")
+    indicators: str = Field(description="explain why this patient matches this diagnosis")
     treatment: str = Field(description="Available treatment options")
     tests: str = Field(description="Recommended follow up tests, and what you're looking for, probative information desired")
     referrals: str = Field(description="Names of the specialists for treatment")

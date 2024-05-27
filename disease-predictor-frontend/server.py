@@ -3,6 +3,8 @@ import requests
 import extra_streamlit_components as stx
 import json
 from streamlit_option_menu import option_menu
+from symptom import symptom_list, prepare_model_input
+
 
 cookie_manager = stx.CookieManager()
 
@@ -114,7 +116,7 @@ def generate_question(answer_to_previous_question):
     response_data = response.json()
     question = response_data.get("question")
     thought = response_data.get("thought")
-    return question
+    return question, thought
 
 def diagnose():
     url = "http://localhost:5000/agent/diagnose"
@@ -126,7 +128,6 @@ def diagnose():
     response = requests.post(url,headers=headers)
     response_data = response.json()
     return response_data
-
 
 # Login page
 def login_page():
@@ -170,7 +171,7 @@ def home_page():
     with st.sidebar:
         selected = option_menu(
             menu_title=None, 
-            options= ["Home", 'Symptoms','Chat'], 
+            options= ["Home", 'Disease Predictor','Chat'], 
             icons=['house', 'clipboard2-pulse-fill','chat'],
             menu_icon="cast",
             default_index=0)
@@ -202,9 +203,19 @@ def home_page():
             
             st.sidebar.markdown("---")
 
+    if selected == 'Disease Predictor':
+        # Allow users to select one or more options
+        if "selected_options" not in st.session_state:
+            st.session_state.selected_options = []
+            
+        selected_options = st.multiselect("Select symptoms:", options=symptom_list,default = st.session_state.selected_options)
+        st.session_state.selected_options = selected_options
+        model_input = prepare_model_input(selected_options)
+        st.markdown(model_input)
+
     if selected == 'Chat':
         if not st.session_state.show_diagnosis:
-            st.write("Welcome to chat!")
+           
             # Initialize chat history
             if "messages" not in st.session_state:
                 st.session_state.messages = []
@@ -224,30 +235,43 @@ def home_page():
 
                 #generating question
                 with st.spinner("Thinking..."):
-                    quesion = generate_question(prompt)
+                    quesion, thought = generate_question(prompt)
                 # Display assistant message in chat message container
                 if quesion and prompt:
                     with st.chat_message("assistant"):
+                        st.markdown(thought)
                         st.markdown(quesion)
 
             # Add user assistant to chat history
+                st.session_state.messages.append({"role": "assistant", "content": thought})
                 st.session_state.messages.append({"role": "assistant", "content": quesion})
+                
 
         #rendering diagnosis results
         if st.session_state.show_diagnosis:
             # Display additional content for diagnosis
-            st.header("Diagnosis Results")
-
+            st.title("Disease Prediction Results")
             #setting diagnosis state, if diagnose does not exist in session
             if "diagnosis" not in st.session_state :
                 st.session_state.diagnosis = False
 
             if not st.session_state.diagnosis:
-                with st.spinner("Thinking..."):
+                with st.spinner("Operation in progress. Please wait."):
                     results = diagnose()
                     st.session_state.diagnosis = results
-            st.write(st.session_state.diagnosis)
-            # Add your diagnosis content here
+            
+            st.subheader('Differentials', divider='orange')
+            st.markdown(st.session_state.diagnosis.get("differentials"))
+            st.subheader('Indicators', divider='orange')
+            st.markdown(st.session_state.diagnosis.get("indicators"))
+            st.subheader('Symptoms', divider='orange')
+            st.markdown(st.session_state.diagnosis.get("symptoms"))
+            st.subheader('Treatment', divider='orange')
+            st.markdown(st.session_state.diagnosis.get("treatment"))
+            st.subheader('Tests', divider='orange')
+            st.markdown(st.session_state.diagnosis.get("tests"))
+            st.subheader('Referrals', divider='orange')
+            st.markdown(st.session_state.diagnosis.get("referrals"))
         
     # Empty space to push the logout button to the bottom
     for _ in range(empty_space_for_logout):
@@ -260,6 +284,11 @@ def home_page():
                 #clear_cookie("dp_session")
                 clear_cookie("dp_session")
                 st.session_state.logged_in = False
+                st.session_state.show_diagnosis = False
+                st.session_state.diagnosis = False
+                st.session_state.selected_options = []
+
+
                 login_page()
         except Exception as e:
             login_page()

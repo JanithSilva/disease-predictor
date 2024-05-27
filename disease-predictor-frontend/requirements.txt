@@ -2,3 +2,4 @@ extra_streamlit_components
 stramlit
 streamlit_extras
 requests
+streamlit_lottie

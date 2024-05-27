@@ -19,7 +19,7 @@ class InferenceLLM:
     @classmethod
     def _create_instance(cls):
         load_dotenv()  # Load environment variables from .env file
-        inference_server_url = "http://150.249.127.214:56301"#os.getenv('INFERENCE_SERVER_URL')
+        inference_server_url = "http://94.61.157.224:53709"#os.getenv('INFERENCE_SERVER_URL')
         llm = HuggingFaceTextGenInference(
             inference_server_url=inference_server_url,
             max_new_tokens=1000,
