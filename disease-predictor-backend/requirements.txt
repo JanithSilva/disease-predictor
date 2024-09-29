@@ -5,7 +5,6 @@ click==8.1.7
 colorama==0.4.6
 Flask==2.3.3
 Flask-Cors==4.0.0
-googlemaps==4.10.0
 idna==3.4
 itsdangerous==2.1.2
 Jinja2==3.1.2
@@ -24,12 +23,14 @@ threadpoolctl==3.2.0
 tzdata==2023.3
 urllib3==2.0.5
 Werkzeug==2.3.7
-langchain
+langchain == 0.1.0 
 duckduckgo-search
 text_generation
 flask_sqlalchemy
 flask_login
 flask_bcrypt
 redis
+keras
+tensorflow==2.3.0
 
 

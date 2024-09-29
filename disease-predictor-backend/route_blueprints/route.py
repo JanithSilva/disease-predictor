@@ -5,6 +5,7 @@ from llm_chatbot import run_QnA_agent_executer, prepare_medical_notes, disgnose
 import pickle
 from langchain.memory import ConversationBufferMemory
 import json  
+from predictor import get_top_5_predictions
 
 
 route_bp = Blueprint('route', __name__)
@@ -58,6 +59,14 @@ def diagnose():
 
     # Convert the dictionary to a JSON object
     response = json.dumps(diagnosis_dict, indent=4)
+    return response, 200
+
+@route_bp.route('/predict', methods=['POST'])
+@login_required
+def get_top_predictions():
+    model_input = request.json.get("model_input")
+    top_5_predictions = get_top_5_predictions(model_input)
+    response = json.dumps(top_5_predictions, indent=4)
     return response, 200
 
 

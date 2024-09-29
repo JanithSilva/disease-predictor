@@ -5,7 +5,7 @@ Your mission is to generate a single question for the patient to fully articulat
 Use the following format:
 
 Thought: Take into account the patient's response and strategize your next step. Do not repeatedly think the same thing.
-Question: A single question for the patient. A brief, clear question that can be answerd without medical knowlege, ensuring avoidance of redundancy with previously posed questions, do not add any extra text.
+Question: A single question for the patient. A brief, clear question that can be answerd without medical knowledge, ensuring avoidance of redundancy with previously posed questions, do not add any extra text.
 
 Begin!
 

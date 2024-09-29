@@ -4,6 +4,7 @@ from db.models import User
 from flask_login import login_user, login_required, logout_user, current_user
 import pickle
 from langchain.memory import ConversationBufferMemory
+from db.models import db
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -36,8 +37,8 @@ def register():
     new_user = User(username=username, password=hashed_password)
 
     # Add the user to the database
-    current_app.db.session.add(new_user)
-    current_app.db.session.commit()
+    db.session.add(new_user)
+    db.session.commit()
 
     return jsonify({"message": "User registered successfully."}), 201
 

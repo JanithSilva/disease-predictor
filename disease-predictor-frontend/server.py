@@ -4,7 +4,8 @@ import extra_streamlit_components as stx
 import json
 from streamlit_option_menu import option_menu
 from symptom import symptom_list, prepare_model_input
-
+from backend_requests import login, register, clear_memory, logout, generate_question, diagnose, get_top_predictions
+import random
 
 cookie_manager = stx.CookieManager()
 
@@ -23,160 +24,55 @@ def get_cookie(key):
         return cookie_value
     else:
         return None
-        
-def check_backend_session_status(session_cookie):
 
-    url = "http://localhost:5000/is_loggedin"
-
-    headers = {
-        'Content-Type': 'application/json',
-        'Cookie': f'session={session_cookie}'
-    }
-
-    response = requests.post(url, headers=headers)
-    
-    if response.status_code == 200:
-        return True
-    else: 
-        return False
-    
-# Function to make a POST request to the backend server for login
-def login(username, password):
-    url = "http://localhost:5000/login"
-    
-    data = {"username": username, "password": password}
-
-    # Serialize data to JSON format
-    json_data = json.dumps(data)
-
-    headers = {
-        'Content-Type': 'application/json',
-        'Content-Encoding': 'gzip'           
-    }
-
-    response = requests.post(url, data=json_data, headers = headers)
-    return response
-
-# Function to make a POST request to the backend server for user registration
-def register(username, password):
-    # Replace this with your registration endpoint if different
-    url = "http://localhost:5000/register"
-    
-    data = {"username": username, "password": password}
-
-      # Serialize data to JSON format
-    json_data = json.dumps(data)
-
-    headers = {
-        'Content-Type': 'application/json',  
-        'Content-Encoding': 'gzip'          
-    }
-    response = requests.post(url, data=json_data, headers = headers)
-    return response
-
-def clear_memory():
-    url = "http://localhost:5000/agent/clear_memory"
-
-    session_cookie = st.session_state.session_cookie
-
-    headers = {
-        'Content-Type': 'application/json',
-        'Cookie': f'session={session_cookie}'
-    }
-    response = requests.post(url, headers = headers)
-    return response
-
-# Function to make a GET request to the backend server for logout
-def logout():
-    # Replace this with your logout endpoint if different
-    url = "http://localhost:5000/logout"
-    session_cookie = st.session_state.session_cookie
-    headers = {
-        'Content-Type': 'application/json',  
-        'Content-Encoding': 'gzip',
-        'Cookie': f'session={session_cookie}'          
-    }
-    response = requests.post(url, headers=headers)
-    return response
-
-def generate_question(answer_to_previous_question):
-    url = "http://localhost:5000/agent/generate_question"
-    session_cookie = st.session_state.session_cookie
-    print(session_cookie)
-    headers = {
-        'Content-Type': 'application/json',
-        'Cookie':f'session={session_cookie}',
-    }
-
-    data = {"patient": answer_to_previous_question}
-
-    # Serialize data to JSON format
-    json_data = json.dumps(data)
-    response = requests.post(url, data=json_data, headers=headers)
-    response_data = response.json()
-    question = response_data.get("question")
-    thought = response_data.get("thought")
-    return question, thought
-
-def diagnose():
-    url = "http://localhost:5000/agent/diagnose"
-    session_cookie = st.session_state.session_cookie
-    headers = {
-        'Cookie': f'session={session_cookie}'          
-    }
-  
-    response = requests.post(url,headers=headers)
-    response_data = response.json()
-    return response_data
-
-# Login page
 def login_page():
-    st.title("Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        response = login(username, password)
-        if response.status_code == 200:
-            st.success("Login Successful!")
-            # Store session cookie value in session state
-            session_cookie = response.cookies.get("session")
-            if session_cookie:
-                st.session_state.session_cookie = session_cookie
-                st.session_state.logged_in = True
-                set_cookie("dp_session", session_cookie)
-                st.write("Redirecting to Home Page...")
-                # Redirect to Home Page
-                home_page()
+    tab1, tab2 = st.tabs(["Login", "Signup"])
+    with tab1:
+        username = st.text_input("Username", key="login_username")
+        password = st.text_input("Password", type="password", key="login_password")
+        if st.button("Login"):
+            response = login(username, password)
+            if response.status_code == 200:
+                st.success("Login Successful!")
+                session_cookie = response.cookies.get("session")
+                if session_cookie:
+                    st.session_state.session_cookie = session_cookie
+                    st.session_state.logged_in = True
+                    set_cookie("dp_session", session_cookie)
+                    st.write("Redirecting to Home Page...")
+                    home_page()
+                else:
+                    st.error("Failed to obtain session cookie. Please try again.")
             else:
-                st.error("Failed to obtain session cookie. Please try again.")
-        else:
-            st.error("Login Failed. Please check your credentials.")
+                st.error("Login Failed. Please check your credentials.")
+    
+    with tab2:
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Register"):
+            response = register(username, password)
+            if response.status_code == 201:
+                st.success("Registration Successful!")
+                # Redirect to Login Page
+                login_page()
+            else:
+                response_data = response.json()
+                st.error(f"Registration Failed. {response_data['message']}")
 
-# User registration page
-def register_page():
-    st.title("Register")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Register"):
-        response = register(username, password)
-        if response.status_code == 200:
-            st.success("Registration Successful!")
-            # Redirect to Login Page
-            login_page()
-        else:
-            st.error("Registration Failed. Please try again.")
+
+
 
 def home_page():
     empty_space_for_logout = 21
     with st.sidebar:
         selected = option_menu(
             menu_title=None, 
-            options= ["Home", 'Disease Predictor','Chat'], 
-            icons=['house', 'clipboard2-pulse-fill','chat'],
-            menu_icon="cast",
+            options= [ 'Symptom Prediction','Chat with Assistant'], 
+            # icons=['clipboard2-pulse-fill','chat'],
+            # menu_icon="cast",
             default_index=0)
 
-        if selected == 'Chat':
+        if selected == 'Chat with Assistant':
             #space for logout button
             empty_space_for_logout = 9
 
@@ -190,7 +86,7 @@ def home_page():
                 st.session_state.diagnosis = False
 
                 #clearing backend memory
-                clear_memory()
+                clear_memory(st.session_state.session_cookie)
                 st.rerun()
 
             # Define a state variable to control whether to display diagnosis content
@@ -203,22 +99,50 @@ def home_page():
             
             st.sidebar.markdown("---")
 
-    if selected == 'Disease Predictor':
+    if selected == 'Symptom Prediction':
         # Allow users to select one or more options
         if "selected_options" not in st.session_state:
             st.session_state.selected_options = []
             
-        selected_options = st.multiselect("Select symptoms:", options=symptom_list,default = st.session_state.selected_options)
-        st.session_state.selected_options = selected_options
+        selected_options = st.multiselect("Select symptoms:", options=symptom_list, default = st.session_state.selected_options)
+        #st.session_state.selected_options = selected_options
         model_input = prepare_model_input(selected_options)
-        st.markdown(model_input)
+        
+        if st.button("Predict"):
+            with st.spinner("Please Wait..."):
+                top_predictions = get_top_predictions(st.session_state.session_cookie, model_input)
+                st.write("### Top Predictions:")
+                for prediction in top_predictions:
+                    st.write(f"- **{prediction['label']}**: {prediction['probability']:.2%}")
+            
+            if st.button("Clear"):
+                st.session_state.selected_options = []
+                st.experimental_rerun()  # Clear selections and refresh the page
 
-    if selected == 'Chat':
+    if selected == 'Chat with Assistant':
         if not st.session_state.show_diagnosis:
            
             # Initialize chat history
             if "messages" not in st.session_state:
-                st.session_state.messages = []
+                st.session_state.messages = []    
+
+            if len(st.session_state.messages) == 0 :
+                symptom_prompts = [
+                    "Please share your symptoms.",
+                    "What symptoms are you experiencing?",
+                    "Can you tell me about your symptoms?",
+                    "Please describe what you're feeling.",
+                    "What symptoms do you have right now?",
+                    "Could you provide details about your symptoms?",
+                    "Let me know your symptoms for better assistance.",
+                    "What specific symptoms are you noticing?"
+                    ]
+
+                # Select a random prompt
+                random_prompt = random.choice(symptom_prompts)
+
+                st.session_state.messages.append({"role": "assistant", "content": random_prompt})
+
 
             # Display chat messages from history on app rerun
             for message in st.session_state.messages:
@@ -226,7 +150,7 @@ def home_page():
                     st.markdown(message["content"])
 
             # Accept user input
-            if prompt := st.chat_input("What is up?"):
+            if prompt := st.chat_input(" "):
             # Display user message in chat message container
                 with st.chat_message("user"):
                     st.markdown(prompt)
@@ -235,15 +159,15 @@ def home_page():
 
                 #generating question
                 with st.spinner("Thinking..."):
-                    quesion, thought = generate_question(prompt)
+                    quesion, thought = generate_question(prompt, st.session_state.session_cookie)
                 # Display assistant message in chat message container
                 if quesion and prompt:
                     with st.chat_message("assistant"):
-                        st.markdown(thought)
+                        #st.markdown(thought)
                         st.markdown(quesion)
 
             # Add user assistant to chat history
-                st.session_state.messages.append({"role": "assistant", "content": thought})
+                #st.session_state.messages.append({"role": "assistant", "content": thought})
                 st.session_state.messages.append({"role": "assistant", "content": quesion})
                 
 
@@ -257,13 +181,11 @@ def home_page():
 
             if not st.session_state.diagnosis:
                 with st.spinner("Operation in progress. Please wait."):
-                    results = diagnose()
+                    results = diagnose(st.session_state.session_cookie)
                     st.session_state.diagnosis = results
             
             st.subheader('Differentials', divider='orange')
             st.markdown(st.session_state.diagnosis.get("differentials"))
-            st.subheader('Indicators', divider='orange')
-            st.markdown(st.session_state.diagnosis.get("indicators"))
             st.subheader('Symptoms', divider='orange')
             st.markdown(st.session_state.diagnosis.get("symptoms"))
             st.subheader('Treatment', divider='orange')
@@ -279,7 +201,7 @@ def home_page():
 
     if st.sidebar.button("logout"):
         try: 
-            response = logout()
+            response = logout(st.session_state.session_cookie)
             if response.status_code == 200:
                 #clear_cookie("dp_session")
                 clear_cookie("dp_session")
@@ -293,9 +215,6 @@ def home_page():
         except Exception as e:
             login_page()
             st.error("Logout Failed!.")
-   
-
-
 
 # Main function to control the flow of the application
 def main():

@@ -37,6 +37,7 @@ def run_QnA_agent_executer(input, memory):
 
 
 def prepare_medical_notes(memory):
+    memory.chat_memory.messages = memory.chat_memory.messages[:-1]
     chat_log = memory.buffer_as_str
     notes = medical_notes_chain.predict(patient_intake_transcription = chat_log)
     return notes.medical_notes

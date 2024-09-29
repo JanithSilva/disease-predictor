@@ -9,6 +9,8 @@ from flask_login import  LoginManager
 from db.models import User
 import redis
 
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
 
 login_manager = LoginManager()
 load_dotenv()
@@ -47,14 +49,14 @@ redis_client = redis.StrictRedis(
 auth_bp.redis_client = redis_client
 route_bp.redis_client = redis_client
 
+
 #Manually push the application context
 with app.app_context():
     # Create all tables defined in models.py if they do not exist
     db.create_all()
     #create default user
     create_default_user()
-    auth_bp.db = db
-    route_bp.db = db
+    
 
 @app.route('/', methods=['GET'])
 def generate_question():
